@@ -2,7 +2,7 @@
 # step 1 :kill all process
 ps -ef | grep python | grep worker |  awk '{ print $2 }' | sudo xargs kill -9
 # step 2 : run all process with screen
-for i in 2 3 4 5
+for i in 2 3 4 5 6 7 8 9 10
 do
    #echo "Welcome $i times"
    #screen -X -S "worker$i" quit
