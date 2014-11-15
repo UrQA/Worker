@@ -50,17 +50,20 @@ class URQAProcess:
         subprocess.call(["/bin/sh", self.script_name, "start"])
         self.retried = True
     def retry_with_screen(self):
-        #step 1 : make new process
-        command = '''screen -S {} -X stuff "sudo python {} {}
-	"
-	'''.format(self.screen_name,self.executed_file,self.screen_name)
-        proc = subprocess.Popen([command],stdout=subprocess.PIPE, shell=True)
-        (out, err) = proc.communicate()
-        #step 1-0 : wait for this process is alive
-        time.sleep(2)
-        #step 2 : replace pid
-        self.read_pid()
-        self.get_process()
+	try :
+            #step 1 : make new process
+            command = '''screen -S {} -X stuff "sudo python {} {}
+	    "
+	    '''.format(self.screen_name,self.executed_file,self.screen_name)
+            proc = subprocess.Popen([command],stdout=subprocess.PIPE, shell=True)
+            (out, err) = proc.communicate()
+            #step 1-0 : wait for this process is alive
+            time.sleep(2)
+            #step 2 : replace pid
+            self.read_pid()
+            self.get_process()
+	except Exception  as e:
+	    self.retry_with_screen();
         return 
         #screen -S "monitor" -X stuff "sudo python /home/urqa/worker/urqa_worker/worker_monitor/mon.py
         #"
