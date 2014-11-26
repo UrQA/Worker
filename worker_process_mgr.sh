@@ -6,11 +6,11 @@ for i in 2 3
 do
    #echo "Welcome $i times"
    #screen -X -S "worker$i" quit
-   if ! screen -list |grep -q "worker$i"; then
-        screen -S "worker$i" -d -m
+   if ! screen -list |grep -q "worker$i"; then 
+	screen -S "worker$i" -d -m   	
    fi
    sleep 0.1
-   screen -S "worker$i" -X stuff "sudo python worker.py worker$i
+   screen -S "worker$i" -X stuff "sudo python worker.py worker$i 
 "
    sleep 0.1
 done
@@ -26,3 +26,4 @@ fi
 sleep 0.1
 screen -S "monitor1" -X stuff "sudo python /home/urqa/worker/urqa_worker/worker_monitor/mon.py
 "
+
