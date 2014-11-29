@@ -24,7 +24,7 @@ import uuid
 import jpype as mjpype
 
 
-PROJECT_DIR = "/home/urqa/urqa/release/URQA-Server/soma3"
+PROJECT_DIR = os.getcwd();
 
 ##########################################init logger#######################################################
 LOG_DIR = "./worker_log"
@@ -63,10 +63,10 @@ if not os.path.exists(pid_path) :
 #step 1 : get current screen name
 m_argv = sys.argv
 filename = None
-# root terminal it return '\n'
+
 if len(m_argv) == 1:
     filename = 'root'
-#else it return screen name
+
 else :
     filename=m_argv[1]
 
