@@ -23,7 +23,6 @@ import redis
 import uuid
 import jpype as mjpype
 
-
 PROJECT_DIR = os.getcwd();
 
 ##########################################init logger#######################################################
@@ -36,16 +35,16 @@ logging.basicConfig(filename = log_file_path , level=logging.INFO)
 ##########################################init logger#######################################################
 
 ##########################################init rabbitmq######################################################
-credentials = pika.PlainCredentials('urqa', 'urqa')
-parameters  = pika.ConnectionParameters(host='127.0.0.1',
-                                        port=5672,
+credentials = pika.PlainCredentials(get_config("pika_id"), get_config("pika_pwd"))
+parameters  = pika.ConnectionParameters(host=get_config("pika_ip"),
+                                        port=get_config("pika_port"),
                                         credentials=credentials)
 
 connection  = pika.BlockingConnection(parameters)
 channel     = connection.channel()
 
-queue_name = 'urqa.queue'
-exchange_name = 'urqa.exchange'
+queue_name = get_config("queue_name")
+exchange_name = get_config("exchange_name")
 
 channel.queue_declare(queue=queue_name, durable=True)
 channel.queue_bind(exchange =exchange_name, queue = queue_name)
@@ -91,7 +90,7 @@ pid_file.close()
 #Create and engine and get the metadata
 try :
     Base = declarative_base()
-    engine= create_engine("mysql://root:@stanly@urqa@127.0.0.1:3306/urqa?charset=utf8",encoding='utf-8',echo=False)
+    engine= create_engine("mysql://" + get_config("mysql_acct") + ":" + get_config("mysql_pwd") + "@" + get_config("mysql_ip") + ":" + get_config("mysql_port") +"/" +get_config("mysql_db_name") +"?charset=utf8",encoding='utf-8',echo=False)
     metadata = MetaData(bind=engine)
     session = create_session(bind=engine)
 except Exception as e:
