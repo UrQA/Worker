@@ -5,13 +5,10 @@ import os
 import ConfigParser
 import sys
 import uuid
-from worker import Eventpaths
+from worker_model import Eventpaths
 import time
 
 __author__ = 'dookim'
-
-cfg = ConfigParser.RawConfigParser()
-cfg.read(os.path.join(os.path.dirname(__file__),'config.cfg'))
 
 class Ignore_clib:
     list = [
@@ -30,8 +27,6 @@ class Ignore_clib:
         'linker',
     ]
 
-def get_config(option):
-    return cfg.get('urqa',option)
 
 def get_translated_time(origin_time):
     return origin_time[:10]

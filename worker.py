@@ -1,29 +1,27 @@
 
 # -*- coding: utf-8 -*-
-
 import sys
 reload(sys)
 sys.setdefaultencoding('UTF-8')
 import pika
 import json
-
 import base64
 import logging
-
 import os
-import ConfigParser
+from worker_config_mgr import get_config
 from sqlalchemy import *
 from sqlalchemy.orm import create_session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.exc import *
 from sqlalchemy import desc
+from worker_model import *;
 from worker_util import *
-import subprocess
 import redis
 import uuid
 import jpype as mjpype
 
 PROJECT_DIR = os.getcwd();
+
 
 ##########################################init logger#######################################################
 LOG_DIR = "./worker_log"
@@ -35,19 +33,19 @@ logging.basicConfig(filename = log_file_path , level=logging.INFO)
 ##########################################init logger#######################################################
 
 ##########################################init rabbitmq######################################################
+print "start of pika init"
 credentials = pika.PlainCredentials(get_config("pika_id"), get_config("pika_pwd"))
 parameters  = pika.ConnectionParameters(host=get_config("pika_ip"),
-                                        port=get_config("pika_port"),
+                                        port=int(get_config("pika_port")),
                                         credentials=credentials)
-
 connection  = pika.BlockingConnection(parameters)
 channel     = connection.channel()
 
 queue_name = get_config("queue_name")
 exchange_name = get_config("exchange_name")
-
 channel.queue_declare(queue=queue_name, durable=True)
 channel.queue_bind(exchange =exchange_name, queue = queue_name)
+print "end of pika init"
 ##########################################init rabbitmq######################################################
 
 
@@ -83,77 +81,24 @@ pid_file=open(pid_file_path, "w+")
 #create file
 pid_file.write(str(os.getpid()))
 pid_file.close()
-##########################################init pidpath######################################################
-
-##########################################init sqlalchemy###################################################
-#SQL ALCHEMY를 사용한 DB CONNECTION을 맺는 부분
-#Create and engine and get the metadata
-try :
-    Base = declarative_base()
-    engine= create_engine("mysql://" + get_config("mysql_acct") + ":" + get_config("mysql_pwd") + "@" + get_config("mysql_ip") + ":" + get_config("mysql_port") +"/" +get_config("mysql_db_name") +"?charset=utf8",encoding='utf-8',echo=False)
-    metadata = MetaData(bind=engine)
-    session = create_session(bind=engine)
-except Exception as e:
-    print e
-    print "cannot bind DB using Alchemy"
-
-#SCHEMA BIND시키는 부분
-class Instances(Base):
-    __table__ = Table('instances', metadata, autoload=True)
-
-class Projects(Base):
-    __table__ = Table('projects', metadata, autoload=True)
-
-class Proguardmap(Base):
-    __table__ = Table('proguardmap', metadata, autoload=True)
-
-class Errors(Base):
-    __table__ = Table('errors', metadata, autoload=True)
-
-class Appstatistics(Base):
-    __table__ = Table('appstatistics', metadata, autoload=True)
-
-class Osstatistics(Base):
-    __table__ = Table('osstatistics', metadata, autoload=True)
-
-class Devicestatistics(Base):
-    __table__ = Table('devicestatistics', metadata, autoload=True)
-
-class Countrystatistics(Base):
-    __table__ = Table('countrystatistics', metadata, autoload=True)
-
-class Activitystatistics(Base):
-    __table__ = Table('activitystatistics', metadata, autoload=True)
-
-class Tags(Base):
-    __table__ = Table('tags', metadata, autoload=True)
-
-class Eventpaths(Base):
-    __table__ = Table('eventpaths', metadata, autoload=True)
-
-class Appruncount(Base):
-    __table__ = Table('appruncount', metadata, autoload=True)
-
-class Appruncount2(Base):
-    __table__ = Table('appruncount2', metadata, autoload=True)
-
-class Sofiles(Base):
-    __table__ = Table('sofiles', metadata, autoload=True)
-##########################################init sqlalchemy###################################################
 
 ##########################################init redis###################################################
 redis_server = redis.Redis('localhost')
 ex_stored_time = str(session.query(Appruncount2).order_by(desc(Appruncount2.idappruncount2)).first().datetime);
+print "end of redis init"
 ##########################################init redis###################################################
 
 ##########################################init jvm###################################################
 if not mjpype.isJVMStarted():
-    mjpype.startJVM("/usr/lib/jvm/java-7-openjdk-amd64/jre/lib/amd64/server/libjvm.so","-Djava.class.path=/home/urqa/urqa/release/URQA-Server/external/retrace-return-ver2.jar")
+    mjpype.startJVM(get_config("jvm_path"), "-Djava.class.path=" + get_config("proguard_retrace_path"))
 proguard_package=mjpype.JPackage("proguard.retrace")
 retrace_class=proguard_package.ReTrace
+
+print "end of jvm"
 ##########################################init jvm###################################################
 
 print " [*] Waiting for messages. To exit press CTRL+C"
+
 def callback(ch, method, properties,body):
 
     #해당 연산을 하면 python dictionary으로 만들어지게 된다.
@@ -717,15 +662,10 @@ def save_exception(firstData, data_body, origin_time):
         event_path = jsonData['eventpaths']
         save_event_pathes(session, retrace_class,event_path,instanceElement,errorElement,mapElement,map_path)
 
-
-
-
 def finalize():
     mjpype.shutdownJVM()
     connection.close()
     sys.exit(1)
-
-
 
 if __name__ == '__main__':
     try :
@@ -737,7 +677,6 @@ if __name__ == '__main__':
             channel.stop_consuming()
     finally :
         finalize()
-
 
 
 
