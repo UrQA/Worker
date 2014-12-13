@@ -22,7 +22,18 @@ import jpype as mjpype
 
 PROJECT_DIR = os.getcwd();
 
+'''
 
+famersbs [6:42 PM]
+appstatistics
+    : pid 필드 추가
+
+osstatistics
+    : pid 필드 추가
+
+instances
+    : pid 필드 추가
+    '''
 ##########################################init logger#######################################################
 LOG_DIR = "./worker_log"
 if not os.path.exists(LOG_DIR):
@@ -184,11 +195,13 @@ def save_native_exception(firstData, data_body, origin_time):
         jsonData = client_data_validate(data_body)
         #step1: apikey를 이용하여 project찾기
         #apikey가 validate한지 확인하기.
+        pid = -1;
         try:
             apikey = jsonData['apikey']
             projectElement = session.query(Projects).filter_by(apikey=apikey).first();
             if projectElement == None:
                 raise NoResultFound
+            pid = projectElement.pid
         except NoResultFound:
             print 'Invalid apikey'
             return
@@ -227,6 +240,7 @@ def save_native_exception(firstData, data_body, origin_time):
 
         #step4: 인스턴스 생성하기
         instanceElement = Instances(
+            pid = pid,
             iderror = errorElement.iderror,
             ins_count = errorElement.numofinstances,
             sdkversion = jsonData['sdkversion'],
@@ -402,34 +416,25 @@ def save_native_exception(firstData, data_body, origin_time):
             session.flush();
 
             instanceElement.iderror = errorElement_exist.iderror
+            iderror = instanceElement.iderror
+
             session.add(instanceElement)
             session.flush()
+            #change it to update query
+            query = "UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = '{appversion}' and pid = {pid};".format(iderror=iderror, appversion=appversion, pid = pid`);
+            session.execute(query)
 
-            e, created = get_or_create2(session,Appstatistics,defaults={'count':1},iderror=errorElement_exist.iderror,appversion=instanceElement.appversion)
-            if not created:
-                e.count += 1
-                session.add(e)
-                session.flush()
-            e, created = get_or_create2(session,Osstatistics,defaults={'count':1},iderror=errorElement_exist.iderror,osversion=instanceElement.osversion)
-            if not created:
-                e.count += 1
-                session.add(e)
-                session.flush()
-            e, created = get_or_create2(session,Devicestatistics,defaults={'count':1},iderror=errorElement_exist.iderror,devicename=instanceElement.device)
-            if not created:
-                e.count += 1
-                session.add(e)
-                session.flush()
-            e, created = get_or_create2(session,Countrystatistics,defaults={'count':1},iderror=errorElement_exist.iderror,countryname=instanceElement.country)
-            if not created:
-                e.count += 1
-                session.add(e)
-                session.flush()
-            e, created = get_or_create2(session,Activitystatistics,defaults={'count':1},iderror=errorElement_exist.iderror,activityname=instanceElement.lastactivity)
-            if not created:
-                e.count += 1
-                session.add(e)
-                session.flush()
+            query = "UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = '{osversion}' and pid = {pid};".format(iderror=iderror, osversion=instanceElement.osversion, pid = pid);
+            session.execute(query)
+
+            query = "UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = '{devicename}';".format(iderror=iderror, devicename=instanceElement.devicename);
+            session.execute(query)
+
+            query = "UPDATE countrystatistics SET count = count + 1 WHERE iderror = {iderror} and countryname = '{countryname}';".format(iderror=iderror, countryname=instanceElement.countryname);
+            session.execute(query)
+
+            query = "UPDATE activitystatistics SET count = count + 1 WHERE iderror = {iderror} and activityname = '{activityname}';".format(iderror=iderror, activityname=instanceElement.activityname);
+            session.execute(query)
             print "before deleting"
             #session.query(Errors).delete(iderror=errorElement.iderror)
             session.delete(errorElement)
@@ -444,9 +449,9 @@ def save_native_exception(firstData, data_body, origin_time):
             session.add(errorElement)
             session.flush();
 
-            session.add(Appstatistics(iderror=errorElement.iderror,appversion=instanceElement.appversion,count=1))
+            session.add(Appstatistics(iderror=errorElement.iderror,appversion=instanceElement.appversion,count=1, pid = pid))
             session.flush()
-            session.add(Osstatistics(iderror=errorElement.iderror,osversion=instanceElement.osversion,count=1))
+            session.add(Osstatistics(iderror=errorElement.iderror,osversion=instanceElement.osversion,count=1, pid = pid))
             session.flush()
             session.add(Devicestatistics(iderror=errorElement.iderror,devicename=instanceElement.device,count=1))
             session.flush()
@@ -466,11 +471,13 @@ def save_exception(firstData, data_body, origin_time):
         jsonData=client_data_validate(data_body)
 
         #step1: apikey를 이용하여 project찾기
+        pid = -1;
         try:
             apikey = jsonData['apikey']
             projectElement =  session.query(Projects).filter_by(apikey = apikey).first()
             if projectElement == None:
                 raise Exception
+            pid = projectElement.pid;
         #apikey가 없거나 해당 apieky가 유효하지 않을때 에러 발생시키고 리턴
         except Exception as e:
             print e
@@ -535,10 +542,10 @@ def save_exception(firstData, data_body, origin_time):
             session.flush()
 
             iderror = errorElement.iderror
-            query = "UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = '{appversion}';".format(iderror=iderror, appversion=appversion);
+            query = "UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = '{appversion}' and pid = {pid};".format(iderror=iderror, appversion=appversion, pid = pid);
             session.execute(query)
 
-            query = "UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = '{osversion}';".format(iderror=iderror, osversion=osversion);
+            query = "UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = '{osversion}' and pid = {pid};".format(iderror=iderror, osversion=osversion, pid = pid);
             session.execute(query)
 
             query = "UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = '{devicename}';".format(iderror=iderror, devicename=devicename);
@@ -577,9 +584,9 @@ def save_exception(firstData, data_body, origin_time):
             try:
                 session.add(errorElement)
                 session.flush()
-                session.add(Appstatistics(iderror=int(errorElement.iderror),appversion=jsonData['appversion'],count=1))
+                session.add(Appstatistics(iderror=int(errorElement.iderror),appversion=jsonData['appversion'],count=1, pid = pid))
                 session.flush()
-                session.add(Osstatistics(iderror=errorElement.iderror,osversion=jsonData['osversion'],count=1))
+                session.add(Osstatistics(iderror=errorElement.iderror,osversion=jsonData['osversion'],count=1, pid = pid))
                 session.flush()
                 session.add(Devicestatistics(iderror=errorElement.iderror,devicename=jsonData['device'],count=1))
                 session.flush()
@@ -605,7 +612,7 @@ def save_exception(firstData, data_body, origin_time):
 
         #step4: 인스턴스 생성하기
         instanceElement = Instances(
-
+            pid = pid,
             iderror = errorElement.iderror,
             ins_count = errorElement.numofinstances,
             sdkversion = jsonData['sdkversion'],
