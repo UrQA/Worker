@@ -421,7 +421,7 @@ def save_native_exception(firstData, data_body, origin_time):
             session.add(instanceElement)
             session.flush()
             #change it to update query
-            query = "UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = '{appversion}' and pid = {pid};".format(iderror=iderror, appversion=appversion, pid = pid`);
+            query = "UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = '{appversion}' and pid = {pid};".format(iderror=iderror, appversion=appversion, pid = pid);
             session.execute(query)
 
             query = "UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = '{osversion}' and pid = {pid};".format(iderror=iderror, osversion=instanceElement.osversion, pid = pid);
