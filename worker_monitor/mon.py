@@ -156,67 +156,10 @@ while True:
         if process.is_alive():
             print "alive"
         else:
-            process.retry_with_screen()
-            send_mail("urqanoti@gmail.com","@urqa@stanly","doo871128@gmail.com",["doo871128@gmail.com"],"[ERROR Report] GNA Worker dead!!","GNA Worker dead!!",None)
+            if(process.screen_name == "test") :
+                processes.remove(process)
+                send_mail("urqanoti@gmail.com","@urqa@stanly","doo871128@gmail.com",["doo871128@gmail.com"],"[ERROR Report] test Worker dead!!","test Worker dead!!",None)
+            else :
+                process.retry_with_screen()
+                send_mail("urqanoti@gmail.com","@urqa@stanly","doo871128@gmail.com",["doo871128@gmail.com"],"[ERROR Report] release Worker dead!!","release Worker dead!!",None)
     time.sleep(WAIT_TIME)
-
-'''
-def notify_if_needed(retry):
-    if retry > NOTIFY_RETRY_COUNT:
-        # send email or something
-        # exit processes
-    return
-'''
-        
-'''
-def need_to_wait(activate):
-    if activate == False:
-        print "Wating..."
-
-        notify_if_needed(retry)
-    
-        retry++
-        
-        # waiting few secs
-        time.sleep(0.5)
-        
-        # reset PID
-        get_process_info()
-        
-        return True
-    else:
-        retry = 0
-        return False
-
-def get_process_info():
-    print "Get process info"
-
-    try:
-        p = psutil.Process(pid)
-    except:
-        p = None
-    
-    if p.is_running():
-        activate = True
-    else:
-        activate = False
-
-while True:
-    if need_to_wait(activate):
-        continue
-
-    if p is None:
-        activate = False
-        continue
-    
-    is_running = p.is_running()
-    if is_running:
-        activate = True
-        time.sleep(0.5)
-    else:
-        activate = False
-        print "WhatTheHuck?"
-        # run shell script
-'''
-
-
