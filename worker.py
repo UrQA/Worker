@@ -22,7 +22,7 @@ import subprocess
 import redis
 import uuid
 import jpype as mjpype
-
+import subprocess
 
 PROJECT_DIR = "/home/urqa/urqa/release/URQA-Server/soma3"
 
