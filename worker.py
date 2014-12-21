@@ -20,6 +20,7 @@ import redis
 import uuid
 import jpype as mjpype
 import subprocess
+
 PROJECT_DIR = os.getcwd();
 
 '''
@@ -194,6 +195,7 @@ def save_native_exception(firstData, data_body, origin_time):
         logging.info("receive_native")
         jsonData = client_data_validate(data_body)
         #step1: apikey를 이용하여 project찾기
+        logging.info("step 1: find project using apikey")
         #apikey가 validate한지 확인하기.
         pid = -1;
         try:
@@ -208,6 +210,7 @@ def save_native_exception(firstData, data_body, origin_time):
 
         #step2: dummy errorElement생성
         #새로 들어온 에러라면 새로운 에러 생성
+        logging.info("step 2: if this error is new, make new error instance")
         autodetermine = 0
 
         errorElement = Errors(
@@ -220,11 +223,11 @@ def save_native_exception(firstData, data_body, origin_time):
             status = 0, # 0 = new, 1 = open, 2 = ignore, 3 = renew
             createdate = get_translated_time1(origin_time),
             lastdate = get_translated_time1(origin_time),
-            numofinstances = 1,
             callstack = '',#jsonData['callstack'],
             wifion = jsonData['wifion'],
             gpson = jsonData['gpson'],
             mobileon = jsonData['mobileon'],
+            numofinstances = 1,
             totalmemusage = jsonData['appmemtotal'],
             errorweight = 10,
             recur = 0,
@@ -233,12 +236,14 @@ def save_native_exception(firstData, data_body, origin_time):
         session.flush()
 
         #step3: 테그 저장
+        logging.info("step 3 : save tag")
         tagstr = jsonData['tag']
         if tagstr:
             #tagElement, created = Tags.objects.get_or_create(iderror=errorElement,pid=projectElement,tag=tagstr)
             tagElement, created = get_or_create(session,Tags,id=errorElement.iderror, pid=projectElement.pid, tag=tagstr)
 
         #step4: 인스턴스 생성하기
+        logging.info("step 4 : make instance")
         instanceElement = Instances(
             pid = pid,
             iderror = errorElement.iderror,
@@ -274,8 +279,7 @@ def save_native_exception(firstData, data_body, origin_time):
         session.flush()
 
         #step5: 이벤트패스 생성
-        #print 'here! ' + instanceElement.idinstance
-        #instanceElement.update()
+        logging.info("step 5 : make event path")
         appversion = jsonData['appversion']
 
         map_path = os.path.join(PROJECT_DIR,get_config('proguard_map_path'))
@@ -292,12 +296,14 @@ def save_native_exception(firstData, data_body, origin_time):
             print 'no proguard mapfile'
 
         #step5-0:이벤트 패스 실제로 만드는 부분
+        logging.info("step 5 : make event path using save_event_pathes")
         print 'instanceElement.idinstance',instanceElement.idinstance
         eventpath = jsonData['eventpaths']
         save_event_pathes(session,retrace_class,eventpath,instanceElement,errorElement,mapElement,map_path)
 
 
         #step6 : 로그 정보 저장
+        logging.info("step 6 : save log")
         if firstData.has_key("log"):
             log_path = os.path.join(PROJECT_DIR,os.path.join(get_config('log_pool_path'), '%s.txt' % str(instanceElement.idinstance)))
             instanceElement.log_path = log_path
@@ -311,6 +317,7 @@ def save_native_exception(firstData, data_body, origin_time):
 
         #step 7 :native dump data 저장 및 breakpad사용 데이터 분석
         #step 7 -1 : native dump 데이터 저장
+        logging.info("step 7 - 1: save natvie dump data")
         dump_path = os.path.join(PROJECT_DIR,os.path.join(get_config('dmp_pool_path'), '%s.dmp' % str(instanceElement.idinstance)))
         f = file(dump_path,'w')
         f.write(base64.b64decode(firstData['dump_data']))
@@ -325,6 +332,7 @@ def save_native_exception(firstData, data_body, origin_time):
 
         #step 7 -2 dmp 파일 분석
         #step4: dmp파일 분석(with nosym)
+        logging.info("step 7 - 2: analyze dump file")
         print "before no sym"
         arg = [os.path.join(PROJECT_DIR,get_config('minidump_stackwalk_path')) , dump_path]
         fd_popen = subprocess.Popen(arg, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -344,6 +352,7 @@ def save_native_exception(firstData, data_body, origin_time):
             libs.append(lib)
 
         #step 7-4 : DB저장하기
+        logging.info("step 7 - 4: save dump file")
         for lib in libs:
             sofileElement, created = get_or_create2(session,Sofiles,defaults={'uploaded':'X'}, pid=projectElement.pid, appversion=instanceElement.appversion, versionkey=lib[1], filename=lib[0]);
             #sofileElement, created = get_or_create(pid=projectElement, appversion=instanceElement.appversion, versionkey=lib[1], filename=lib[0],defaults={'uploaded':'X'})
@@ -353,6 +362,7 @@ def save_native_exception(firstData, data_body, origin_time):
                 print 'version key:', lib[1], lib[0], 'already exists'
 
         #step 7-5 : ErrorName, ErrorClassname, linenum 추출하기
+        logging.info("step 7 - 5: extract errorname, errorclassname, linenum")
         cs_flag = 0
         errorname = ''
         errorclassname = ''
@@ -381,6 +391,7 @@ def save_native_exception(firstData, data_body, origin_time):
                 cs_flag = 1
 
         #dmp파일 분석(with sym)
+        logging.info("step 7 - 6 : analyze dump file")
         sym_pool_path = os.path.join(PROJECT_DIR,os.path.join(get_config('sym_pool_path'),str(projectElement.apikey)))
         sym_pool_path = os.path.join(sym_pool_path, instanceElement.appversion)
         arg = [os.path.join(PROJECT_DIR,get_config('minidump_stackwalk_path')) , dump_path, sym_pool_path]
@@ -400,12 +411,14 @@ def save_native_exception(firstData, data_body, origin_time):
                 callstack += '\n'
                 callstack += line
                 cs_count = cs_count + 1
-
+        logging.info("step 8 : save error")
         try:
+
             #errorElement_exist = Errors.objects.get(pid=projectElement, errorname=errorname, errorclassname=errorclassname, linenum=linenum)
             errorElement_exist = session.query(Errors).filter_by(pid=projectElement.pid, errorname=errorname, errorclassname=errorclassname, linenum=linenum).first()
             if errorElement_exist == None:
                 raise NoResultFound
+            logging.info("step 8- 1 : when error already exist")
             errorElement_exist.lastdate = errorElement.lastdate
             errorElement_exist.numofinstances += 1
             errorElement_exist.wifion += errorElement.wifion
@@ -442,6 +455,7 @@ def save_native_exception(firstData, data_body, origin_time):
             print "after deleting"
             print 'native error %s:%s already exist' % (errorname, errorclassname)
         except NoResultFound:
+            logging.info("step 8- 1 : when error does not exist")
             errorElement.errorname = errorname
             errorElement.errorclassname = errorclassname
             errorElement.callstack = callstack
@@ -459,7 +473,7 @@ def save_native_exception(firstData, data_body, origin_time):
             session.flush()
             session.add(Activitystatistics(iderror=errorElement.iderror,activityname=instanceElement.lastactivity,count=1))
             session.flush()
-
+        logging.info("complete receive_native");
         print "complete receive_native"
 
 
@@ -526,6 +540,7 @@ def save_exception(firstData, data_body, origin_time):
         logging.info("step 2-1 complete")
 
         try:
+            logging.info("step 2-1-1 save error")
             errorElement = session.query(Errors).filter_by(pid = int(projectElement.pid), errorclassname=str(errorclassname), errorname = str(errorname), linenum = str(linenum)).first()
             if errorElement == None:
                 print "errorElement is None"
@@ -540,27 +555,32 @@ def save_exception(firstData, data_body, origin_time):
             errorElement.totalmemusage += int(jsonData['appmemtotal'])
             session.add(errorElement)
             session.flush()
-
+            logging.info("step 2-1-2 update appstatistics")
             iderror = errorElement.iderror
             query = "UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = '{appversion}' and pid = {pid};".format(iderror=iderror, appversion=appversion, pid = pid);
             session.execute(query)
 
+            logging.info("step 2-1-2 update osstatistics")
             query = "UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = '{osversion}' and pid = {pid};".format(iderror=iderror, osversion=osversion, pid = pid);
             session.execute(query)
 
+            logging.info("step 2-1-2 update devicestatistics")
             query = "UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = '{devicename}';".format(iderror=iderror, devicename=devicename);
             session.execute(query)
 
+            logging.info("step 2-1-2 update countrystatistics")
             query = "UPDATE countrystatistics SET count = count + 1 WHERE iderror = {iderror} and countryname = '{countryname}';".format(iderror=iderror, countryname=countryname);
             session.execute(query)
 
+            logging.info("step 2-1-2 update activitystatistics")
             query = "UPDATE activitystatistics SET count = count + 1 WHERE iderror = {iderror} and activityname = '{activityname}';".format(iderror=iderror, activityname=activityname);
             session.execute(query)
-            logging.info("step 2-2 complete")
+            logging.info("step 2-1 complete")
 
         except NoResultFound:
             autodetermine = 0
 
+            logging.info("step 2-2 save error and update statistics")
             errorElement = Errors(
                 pid = projectElement.pid,
                 errorname = errorname,
@@ -668,6 +688,10 @@ def save_exception(firstData, data_body, origin_time):
         print "save event path"
         event_path = jsonData['eventpaths']
         save_event_pathes(session, retrace_class,event_path,instanceElement,errorElement,mapElement,map_path)
+        logging.info("step 5-0 complete")
+
+
+        logging.info("save exception is complete")
 
 def finalize():
     mjpype.shutdownJVM()
@@ -681,6 +705,7 @@ if __name__ == '__main__':
             channel.start_consuming()
         except Exception as e:
             print e
+            logging.error(e)
             channel.stop_consuming()
     finally :
         finalize()
