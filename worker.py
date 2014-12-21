@@ -197,7 +197,6 @@ def save_native_exception(firstData, data_body, origin_time):
         #step1: apikey를 이용하여 project찾기
         logging.info("step 1: find project using apikey")
         #apikey가 validate한지 확인하기.
-        pid = -1;
         try:
             apikey = jsonData['apikey']
             projectElement = session.query(Projects).filter_by(apikey=apikey).first();
@@ -239,10 +238,9 @@ def save_native_exception(firstData, data_body, origin_time):
         logging.info("step 3 : save tag")
         tagstr = jsonData['tag']
         if tagstr:
-            #tagElement, created = Tags.objects.get_or_create(iderror=errorElement,pid=projectElement,tag=tagstr)
             tagElement, created = get_or_create(session,Tags,id=errorElement.iderror, pid=projectElement.pid, tag=tagstr)
 
-        #step4: 인스턴스 생성하기
+        #step4: 인스턴스
         logging.info("step 4 : make instance")
         instanceElement = Instances(
             pid = pid,
@@ -413,7 +411,7 @@ def save_native_exception(firstData, data_body, origin_time):
                 cs_count = cs_count + 1
         logging.info("step 8 : save error")
         try:
-
+            #저에러랑 이에러랑 같은건데 실제로는 저걸로 검색이 안되서 내가 고민하는 거임
             #errorElement_exist = Errors.objects.get(pid=projectElement, errorname=errorname, errorclassname=errorclassname, linenum=linenum)
             errorElement_exist = session.query(Errors).filter_by(pid=projectElement.pid, errorname=errorname, errorclassname=errorclassname, linenum=linenum).first()
             if errorElement_exist == None:
@@ -434,25 +432,24 @@ def save_native_exception(firstData, data_body, origin_time):
             session.add(instanceElement)
             session.flush()
             #change it to update query
-            query = "UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = '{appversion}' and pid = {pid};".format(iderror=iderror, appversion=appversion, pid = pid);
+            query = '''UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = "{appversion}" and pid = {pid};'''.format(iderror=iderror, appversion=appversion, pid = pid);
             session.execute(query)
 
-            query = "UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = '{osversion}' and pid = {pid};".format(iderror=iderror, osversion=instanceElement.osversion, pid = pid);
+            query = '''UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = "{osversion}" and pid = {pid};'''.format(iderror=iderror, osversion=instanceElement.osversion, pid = pid);
             session.execute(query)
 
-            query = "UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = '{devicename}';".format(iderror=iderror, devicename=instanceElement.devicename);
+            query = '''UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = "{devicename}";'''.format(iderror=iderror, devicename=instanceElement.devicename);
             session.execute(query)
 
-            query = "UPDATE countrystatistics SET count = count + 1 WHERE iderror = {iderror} and countryname = '{countryname}';".format(iderror=iderror, countryname=instanceElement.countryname);
+            query = '''UPDATE countrystatistics SET count = count + 1 WHERE iderror = {iderror} and countryname = "{countryname}";'''.format(iderror=iderror, countryname=instanceElement.countryname);
             session.execute(query)
 
-            query = "UPDATE activitystatistics SET count = count + 1 WHERE iderror = {iderror} and activityname = '{activityname}';".format(iderror=iderror, activityname=instanceElement.activityname);
+            query = '''UPDATE activitystatistics SET count = count + 1 WHERE iderror = {iderror} and activityname = "{activityname}";'''.format(iderror=iderror, activityname=instanceElement.activityname);
             session.execute(query)
             print "before deleting"
-            #session.query(Errors).delete(iderror=errorElement.iderror)
+
             session.delete(errorElement)
             session.flush()
-            print "after deleting"
             print 'native error %s:%s already exist' % (errorname, errorclassname)
         except NoResultFound:
             logging.info("step 8- 1 : when error does not exist")
@@ -479,13 +476,13 @@ def save_native_exception(firstData, data_body, origin_time):
 
 
 def save_exception(firstData, data_body, origin_time):
-        print "save exception"
+        logging.info("save exception")
 
         #step 1 : data가 유효한지 확인하기.
         jsonData=client_data_validate(data_body)
 
         #step1: apikey를 이용하여 project찾기
-        pid = -1;
+        logging.info("step 1 : find project using apikey")
         try:
             apikey = jsonData['apikey']
             projectElement =  session.query(Projects).filter_by(apikey = apikey).first()
@@ -497,9 +494,9 @@ def save_exception(firstData, data_body, origin_time):
             print e
             print 'Invalid apikey'
             return
-        logging.info("step 1 complete")
 
         #step2: errorname, errorclassname, linenum을 json에서 가져오기
+        logging.info("step 2 : parse data from json")
         try:
             errorname = jsonData['errorname'].encode('utf-8')
             errorclassname = jsonData['errorclassname'].encode('utf-8')
@@ -516,7 +513,6 @@ def save_exception(firstData, data_body, origin_time):
             logging.error(str(e))
             return
 
-        logging.info("step 2 complete")
         logging.info(firstData)
 
         map_path = os.path.join(PROJECT_DIR,get_config('proguard_map_path'))
@@ -524,7 +520,7 @@ def save_exception(firstData, data_body, origin_time):
         map_path = os.path.join(map_path,appversion)
 
         #progurd가 적용된지 확인하는 부분!!!
-        logging.info("step 2-0 complete")
+        logging.info("step 2 - 0 : check this project is adapted using proguard")
         try:
             mapElement=session.query(Proguardmap).filter_by(pid = int(projectElement.pid), appversion = appversion).first()
             if mapElement == None:
@@ -537,7 +533,6 @@ def save_exception(firstData, data_body, origin_time):
             print "no result found in proguard map"
             mapElement = None
 
-        logging.info("step 2-1 complete")
 
         try:
             logging.info("step 2-1-1 save error")
@@ -557,23 +552,23 @@ def save_exception(firstData, data_body, origin_time):
             session.flush()
             logging.info("step 2-1-2 update appstatistics")
             iderror = errorElement.iderror
-            query = "UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = '{appversion}' and pid = {pid};".format(iderror=iderror, appversion=appversion, pid = pid);
+            query = '''UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = "{appversion}" and pid = {pid};'''.format(iderror=iderror, appversion=appversion, pid = pid);
             session.execute(query)
 
             logging.info("step 2-1-2 update osstatistics")
-            query = "UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = '{osversion}' and pid = {pid};".format(iderror=iderror, osversion=osversion, pid = pid);
+            query = '''UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = "{osversion}" and pid = {pid};'''.format(iderror=iderror, osversion=osversion, pid = pid);
             session.execute(query)
 
             logging.info("step 2-1-2 update devicestatistics")
-            query = "UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = '{devicename}';".format(iderror=iderror, devicename=devicename);
+            query = '''UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = "{devicename}";'''.format(iderror=iderror, devicename=devicename);
             session.execute(query)
 
             logging.info("step 2-1-2 update countrystatistics")
-            query = "UPDATE countrystatistics SET count = count + 1 WHERE iderror = {iderror} and countryname = '{countryname}';".format(iderror=iderror, countryname=countryname);
+            query = '''UPDATE countrystatistics SET count = count + 1 WHERE iderror = {iderror} and countryname = "{countryname}";'''.format(iderror=iderror, countryname=countryname);
             session.execute(query)
 
             logging.info("step 2-1-2 update activitystatistics")
-            query = "UPDATE activitystatistics SET count = count + 1 WHERE iderror = {iderror} and activityname = '{activityname}';".format(iderror=iderror, activityname=activityname);
+            query = '''UPDATE activitystatistics SET count = count + 1 WHERE iderror = {iderror} and activityname = "{activityname}";'''.format(iderror=iderror, activityname=activityname);
             session.execute(query)
             logging.info("step 2-1 complete")
 
@@ -619,18 +614,15 @@ def save_exception(firstData, data_body, origin_time):
                 print "add err"
                 print e
 
-        logging.info("step 2-3 complete")
-
         #step3: 테그 저장
+        logging.info("step 3 : save tag")
         if jsonData['tag']:
             tagstr = jsonData['tag']
             # 단순 create 연산으로 바꿀것.
             tagElement, created = get_or_create(session,Tags, iderror=errorElement.iderror,pid=projectElement.pid,tag=tagstr)
 
-
-        logging.info("step 3 complete")
-
         #step4: 인스턴스 생성하기
+        logging.info("step 4 : create instance")
         instanceElement = Instances(
             pid = pid,
             iderror = errorElement.iderror,
@@ -667,29 +659,22 @@ def save_exception(firstData, data_body, origin_time):
         session.add(instanceElement)
         session.flush()
 
-        logging.info("step 4 complete")
-
         #step 4-0 해당 인스턴스 아이디로 콘솔로그 저장
+        logging.info("step 4 - 0 : save console log")
         if firstData.has_key("log"):
             log_path = os.path.join(PROJECT_DIR,os.path.join(get_config('log_pool_path'), '%s.txt' % str(instanceElement.idinstance)))
             instanceElement.log_path = log_path
             session.add(instanceElement)
             session.flush()
-
-            print log_path
-
             f = file(log_path,'w')
             f.write(firstData['log'].encode('utf-8'))
             f.close()
 
-        logging.info("step 4-0 complete")
-
         #step5: 이벤트패스 생성
         print "save event path"
+        logging.info("step 5 : save event path")
         event_path = jsonData['eventpaths']
         save_event_pathes(session, retrace_class,event_path,instanceElement,errorElement,mapElement,map_path)
-        logging.info("step 5-0 complete")
-
 
         logging.info("save exception is complete")
 
