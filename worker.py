@@ -315,7 +315,8 @@ def save_native_exception(firstData, data_body, origin_time):
 
         #step 7 :native dump data 저장 및 breakpad사용 데이터 분석
         #step 7 -1 : native dump 데이터 저장
-        logging.info("step 7 - 1: save natvie dump data")
+        #what is dump?
+        logging.info("step 7 - 1 : save natvie dump data")
         dump_path = os.path.join(PROJECT_DIR,os.path.join(get_config('dmp_pool_path'), '%s.dmp' % str(instanceElement.idinstance)))
         f = file(dump_path,'w')
         f.write(base64.b64decode(firstData['dump_data']))
@@ -326,17 +327,17 @@ def save_native_exception(firstData, data_body, origin_time):
         instanceElement.dump_path = dump_path
         session.add(instanceElement)
         session.flush()
-        print 'stuck point'
 
         #step 7 -2 dmp 파일 분석
         #step4: dmp파일 분석(with nosym)
-        logging.info("step 7 - 2: analyze dump file")
+        logging.info("step 7 - 2 : analyze dump file")
         print "before no sym"
         arg = [os.path.join(PROJECT_DIR,get_config('minidump_stackwalk_path')) , dump_path]
         fd_popen = subprocess.Popen(arg, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (stdout, stderr) = fd_popen.communicate()
         print "communiction result " + str(stdout) + " " +str(stderr)
         print "after no sym"
+
         #step 7-3 : so library 추출
         libs = []
         stderr_split = stderr.splitlines()
@@ -353,7 +354,7 @@ def save_native_exception(firstData, data_body, origin_time):
         logging.info("step 7 - 4: save dump file")
         for lib in libs:
             sofileElement, created = get_or_create2(session,Sofiles,defaults={'uploaded':'X'}, pid=projectElement.pid, appversion=instanceElement.appversion, versionkey=lib[1], filename=lib[0]);
-            #sofileElement, created = get_or_create(pid=projectElement, appversion=instanceElement.appversion, versionkey=lib[1], filename=lib[0],defaults={'uploaded':'X'})
+            #필요없는로직
             if created:
                 print 'new version key : ', lib[1], lib[0]
             else:
@@ -432,22 +433,24 @@ def save_native_exception(firstData, data_body, origin_time):
             session.add(instanceElement)
             session.flush()
             #change it to update query
+            logging.info("step 8-2 : update statistics")
+            logging.info("step 8-2-1 : update appstatistics")
             query = '''UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = "{appversion}" and pid = {pid};'''.format(iderror=iderror, appversion=appversion, pid = pid);
             session.execute(query)
-
+            logging.info("step 8-2-1 : update osstatistics")
             query = '''UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = "{osversion}" and pid = {pid};'''.format(iderror=iderror, osversion=instanceElement.osversion, pid = pid);
             session.execute(query)
-
+            logging.info("step 8-2-1 : update devicestatistics")
             query = '''UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = "{devicename}";'''.format(iderror=iderror, devicename=instanceElement.devicename);
             session.execute(query)
-
+            logging.info("step 8-2-1 : update countrystatistics")
             query = '''UPDATE countrystatistics SET count = count + 1 WHERE iderror = {iderror} and countryname = "{countryname}";'''.format(iderror=iderror, countryname=instanceElement.countryname);
             session.execute(query)
-
+            logging.info("step 8-2-1 : update activitystatistics")
             query = '''UPDATE activitystatistics SET count = count + 1 WHERE iderror = {iderror} and activityname = "{activityname}";'''.format(iderror=iderror, activityname=instanceElement.activityname);
             session.execute(query)
             print "before deleting"
-
+            logging.info("step 8-3 : delete errorElement");
             session.delete(errorElement)
             session.flush()
             print 'native error %s:%s already exist' % (errorname, errorclassname)
