@@ -5,13 +5,10 @@ import os
 import ConfigParser
 import sys
 import uuid
-from worker import Eventpaths
+from worker_model import Eventpaths
 import time
 
 __author__ = 'dookim'
-
-cfg = ConfigParser.RawConfigParser()
-cfg.read(os.path.join(os.path.dirname(__file__),'config.cfg'))
 
 class Ignore_clib:
     list = [
@@ -30,8 +27,6 @@ class Ignore_clib:
         'linker',
     ]
 
-def get_config(option):
-    return cfg.get('urqa',option)
 
 def get_translated_time(origin_time):
     return origin_time[:10]
@@ -141,7 +136,11 @@ def save_event_pathes(session,retrace_class, event_path, instanceElement, errorE
             linenum = event['linenum']
             if not 'label' in event:    #event path에 label적용, 기존버전과 호환성을 확보하기위해 'label'초기화를 해줌 client ver 0.91 ->
                 event['label'] = ""
-            #bulk_insert_query_for_event_path += " (NULL, {idinstance}, {iderror}, {ins_count}, '{datetime}', '{classname}', '{methodname}',{linenum},{depth},'{label}'),".format(idinstance=instanceElement.idinstance, iderror=errorElement.iderror, ins_count=errorElement.numofinstances,datetime=naive2aware(event['datetime']),classname=classname, methodname=methodname,linenum=linenum,label=event['label'],depth=depth);
+            label = event['label'];
+            #label이 300byte가 넘어갈경우 잘라줌
+            if(len(label) > 300) :
+                label = label[0:300];
+
             eventpathInstance=Eventpaths(
                 idinstance = instanceElement.idinstance,
                 iderror = errorElement.iderror,
@@ -150,7 +149,7 @@ def save_event_pathes(session,retrace_class, event_path, instanceElement, errorE
                 classname = classname,
                 methodname = methodname,
                 linenum = linenum,
-                label = event['label'],
+                label = label,
                 depth = depth
             )
             session.add(eventpathInstance)
