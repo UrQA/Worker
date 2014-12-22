@@ -531,8 +531,11 @@ def save_native_exception(firstData, data_body, origin_time):
         (stdout, stderr) = fd_popen.communicate()
         print "communiction result " + str(stdout) + " " +str(stderr)
         print "after no sym"
+        logging.info("result stdout : " + stdout)
+        logging.info("result stderr : " + stderr)
 
         #step 7-3 : so library 추출
+        logging.info("step 7 - 3 : extract so library")
         libs = []
         stderr_split = stderr.splitlines()
         for line in stderr_split:
@@ -633,16 +636,18 @@ def save_native_exception(firstData, data_body, origin_time):
             session.execute(query)
             logging.info("step 8-2-1 : update osstatistics")
             query = '''UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = "{osversion}" and pid = {pid};'''.format(iderror=iderror, osversion=instanceElement.osversion, pid = pid);
-            session.execute(query)
-            logging.info("step 8-2-1 : update devicestatistics")
-            query = '''UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = "{devicename}";'''.format(iderror=iderror, devicename=instanceElement.devicename);
             logging.info("executed query : " + query);
             session.execute(query)
+            logging.info("step 8-2-1 : update devicestatistics")
+            logging.info("hello")
+            query = '''UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = "{devicename}";'''.format(iderror=iderror, devicename=instanceElement.device);
+            logging.info(query);
+            session.execute(query)
             logging.info("step 8-2-1 : update countrystatistics")
-            query = '''UPDATE countrystatistics SET count = count + 1 WHERE iderror = {iderror} and countryname = "{countryname}";'''.format(iderror=iderror, countryname=instanceElement.countryname);
+            query = '''UPDATE countrystatistics SET count = count + 1 WHERE iderror = {iderror} and countryname = "{countryname}";'''.format(iderror=iderror, countryname=instanceElement.country);
             session.execute(query)
             logging.info("step 8-2-1 : update activitystatistics")
-            query = '''UPDATE activitystatistics SET count = count + 1 WHERE iderror = {iderror} and activityname = "{activityname}";'''.format(iderror=iderror, activityname=instanceElement.activityname);
+            query = '''UPDATE activitystatistics SET count = count + 1 WHERE iderror = {iderror} and activityname = "{activityname}";'''.format(iderror=iderror, activityname=instanceElement.lastactivity);
             session.execute(query)
             print "before deleting"
             logging.info("step 8-3 : delete errorElement");
