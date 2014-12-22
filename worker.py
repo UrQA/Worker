@@ -21,6 +21,8 @@ import uuid
 import jpype as mjpype
 import subprocess
 
+PROJECT_DIR = os.getcwd();
+
 ##########################################init logger#######################################################
 LOG_DIR = "./worker_log"
 if not os.path.exists(LOG_DIR):
@@ -428,6 +430,7 @@ def save_native_exception(firstData, data_body, origin_time):
             session.execute(query)
             logging.info("step 8-2-1 : update devicestatistics")
             query = '''UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = "{devicename}";'''.format(iderror=iderror, devicename=instanceElement.devicename);
+            logging.info("executed query : " + query);
             session.execute(query)
             logging.info("step 8-2-1 : update countrystatistics")
             query = '''UPDATE countrystatistics SET count = count + 1 WHERE iderror = {iderror} and countryname = "{countryname}";'''.format(iderror=iderror, countryname=instanceElement.countryname);
