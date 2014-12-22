@@ -20,24 +20,7 @@ import redis
 import uuid
 import jpype as mjpype
 import subprocess
-<<<<<<< HEAD
-=======
 
-PROJECT_DIR = os.getcwd();
-
-'''
->>>>>>> add_pid
-
-famersbs [6:42 PM]
-appstatistics
-    : pid 필드 추가
-
-osstatistics
-    : pid 필드 추가
-
-instances
-    : pid 필드 추가
-    '''
 ##########################################init logger#######################################################
 LOG_DIR = "./worker_log"
 if not os.path.exists(LOG_DIR):
