@@ -223,20 +223,7 @@ def proguard_retrace_callstack(retrace_class, content, map_path, map_filename) :
     print result
     os.remove(temp_path_and_name)
     return result
-'''
-def proguard_retrace_oneline(retrace_class, content, linenum, map_path, map_filename) :
-    proguard_query = 'at\t'+content+'\t(:%s)' % linenum;
-    print proguard_query
-    temp_path_and_name = make_random_file_with_content(proguard_query,map_path);
-    print temp_path_and_name
-    map_path_and_name=os.path.join(map_path,map_filename);
-    print map_path_and_name
-    arg = ['-verbose',map_path_and_name,temp_path_and_name]
-    temp_result=retrace_class.getRetracedResult(arg)
-    result=temp_result.split('\t')[1];
-    os.remove(temp_path_and_name)
-    return result
-'''
+
 def client_data_validate(jsonData):
     oriData = jsonData.copy();
     errorFlag = 0
@@ -246,14 +233,8 @@ def client_data_validate(jsonData):
     if not 'errorname' in jsonData:
         jsonData['errorname'] = 'unknown'
         errorFlag = 1
-    if len(jsonData['errorname']) >= 499:
-        jsonData['errorname'] = jsonData['errorname'][0:499]
-        errorFlag = 1
     if not 'errorclassname' in jsonData:
         jsonData['errorclassname'] = 'unknown'
-        errorFlag = 1
-    if len(jsonData['errorclassname']) >= 299:
-        jsonData['errorclassname'] = jsonData['errorclassname'][0:299]
         errorFlag = 1
     if not 'linenum' in jsonData:
         jsonData['linenum'] = 'unknown'
@@ -338,6 +319,18 @@ def client_data_validate(jsonData):
         errorFlag = 1
     if not 'eventpaths' in jsonData:
         jsonData['eventpaths'] = 'unknown'
+        errorFlag = 1
+
+    #길이 체크 로직
+    #errorFlag는 데이터를 한번이라도 수정했는지 검사하는 부분임
+    if len(jsonData['errorname']) >= 499:
+        jsonData['errorname'] = jsonData['errorname'][0:499]
+        errorFlag = 1
+    if len(jsonData['errorclassname']) >= 299:
+        jsonData['errorclassname'] = jsonData['errorclassname'][0:299]
+        errorFlag = 1
+    if len(jsonData['kernelversion']) > 45:
+        jsonData['kernelversion'] = jsonData['kernelversion'][0:45]
         errorFlag = 1
 
     if errorFlag == 1:
