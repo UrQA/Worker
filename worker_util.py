@@ -2,11 +2,12 @@
 import datetime
 import pytz
 import os
-import ConfigParser
 import sys
 import uuid
-from worker_model import Eventpaths
+from model import Eventpaths
 import time
+import functools
+from log_mgr import logging
 
 __author__ = 'dookim'
 
@@ -26,6 +27,20 @@ class Ignore_clib:
         'librs_jni.so',
         'linker',
     ]
+
+
+def time_checker(logging):
+    def actual_deco(func):
+        @functools.wraps(func)
+        def inner(*args,**kwargs):
+            start_time = time.time();
+            func(*args,**kwargs);
+            end_time = time.time();
+            logging.info("processed time in " + str(func.__name__) + " : " + str(end_time - start_time) + "ms");
+        return inner;
+    return actual_deco;
+
+
 
 
 def get_translated_time(origin_time):
@@ -92,8 +107,8 @@ def make_random_file_with_content(content,path) :
     fp.close();
     return temp_path_and_name;
 
+@time_checker(logging)
 def proguard_retrace_errors(retrace_class, errorname, errorclassname, linenum, callstack, map_path, map_filename) :
-    start_time = time.time();
     query = 'at\t'+errorname+'\t(:%s)' % linenum + "\n";
     query += 'at\t'+errorclassname+'\t(:%s)' % linenum + "\n";
     query += callstack + "\n";
@@ -120,10 +135,8 @@ def proguard_retrace_errors(retrace_class, errorname, errorclassname, linenum, c
     print errorclassname
     print "callstack"
     print callstack
-    end_time = time.time()
-    print "processed time : " + str(end_time - start_time)
     return errorname, errorclassname, callstack;
-
+@time_checker(logging)
 def save_event_pathes(session,retrace_class, event_path, instanceElement, errorElement ,mapElement, map_path):
     if len(event_path) == 0:
         print "event path is 0"

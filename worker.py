@@ -6,15 +6,15 @@ sys.setdefaultencoding('UTF-8')
 import pika
 import json
 import base64
-import logging
+from log_mgr import logging
 import os
-from worker_config_mgr import get_config
+from config_mgr import get_config
 from sqlalchemy import *
 from sqlalchemy.orm import create_session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.exc import *
 from sqlalchemy import desc
-from worker_model import *;
+from model import *;
 from worker_util import *
 import redis
 import uuid
@@ -23,14 +23,7 @@ import subprocess
 
 PROJECT_DIR = os.getcwd();
 
-##########################################init logger#######################################################
-LOG_DIR = "./worker_log"
-if not os.path.exists(LOG_DIR):
-    os.mkdir(LOG_DIR)
 
-log_file_path=os.path.join(LOG_DIR, str(os.getpid())+".log")
-logging.basicConfig(filename = log_file_path , level=logging.INFO)
-##########################################init logger#######################################################
 
 ##########################################init rabbitmq######################################################
 print "start of pika init"
@@ -123,7 +116,7 @@ def callback(ch, method, properties,body):
     elif tag == 'receive_native':
         save_native_exception(firstData,data_body,origin_time);
 
-
+@time_checker(logging)
 def save_connection(data_body,origin_time):
         #print "connect"
         #step1: apikey를  project찾기
@@ -182,7 +175,7 @@ def save_connection(data_body,origin_time):
 
 
 
-
+@time_checker(logging)
 def save_exception(firstData, data_body, origin_time):
         logging.info("save exception")
 
@@ -386,6 +379,7 @@ def save_exception(firstData, data_body, origin_time):
 
         logging.info("save exception is complete")
 
+@time_checker(logging)
 def save_native_exception(firstData, data_body, origin_time):
         logging.info("receive_native")
         jsonData = client_data_validate(data_body)

@@ -5,7 +5,7 @@ from sqlalchemy.orm import create_session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.exc import *
 from sqlalchemy import desc
-from worker_config_mgr import get_config;
+from config_mgr import get_config;
 
 __author__ = 'duhyeong1.kim'
 
