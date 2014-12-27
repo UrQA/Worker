@@ -15,7 +15,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.exc import *
 from sqlalchemy import desc
 from model import *;
-from worker_util import *
+from util import *
 import redis
 import uuid
 import jpype as mjpype
