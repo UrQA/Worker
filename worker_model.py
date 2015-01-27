@@ -25,6 +25,9 @@ except Exception as e:
 class Instances(Base):
     __table__ = Table('instances', metadata, autoload=True)
 
+class Instancelog(Base):
+    __table__ = Table('instancelog', metadata, autoload=True)
+
 class Projects(Base):
     __table__ = Table('projects', metadata, autoload=True)
 

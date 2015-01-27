@@ -189,6 +189,9 @@ def save_exception(firstData, data_body, origin_time):
         #step 1 : data가 유효한지 확인하기.
         jsonData=client_data_validate(data_body)
 
+        #time1은 15분단위로 자른 시간을 의미한다.
+        time1= get_translated_time1(origin_time);
+
         #step1: apikey를 이용하여 project찾기
         logging.info("step 1 : find project using apikey")
         try:
@@ -250,7 +253,7 @@ def save_exception(firstData, data_body, origin_time):
                 raise NoResultFound
             #새로온 인스턴스 정보로 시간 갱신
             errorElement.callstack = callstack
-            errorElement.lastdate = get_translated_time1(origin_time)
+            errorElement.lastdate = time1
             errorElement.numofinstances += 1
             errorElement.wifion += int(jsonData['wifion'])
             errorElement.gpson += int(jsonData['gpson'])
@@ -292,8 +295,8 @@ def save_exception(firstData, data_body, origin_time):
                 autodetermine = autodetermine,
                 rank = int(jsonData['rank']), # Undesided = -1, unhandled = 0, critical = 1, major = 2, minor = 3, native = 4
                 status = 0, # 0 = new, 1 = open, 2 = fixed, 3 = ignore
-                createdate = get_translated_time1(origin_time),
-                lastdate = get_translated_time1(origin_time),
+                createdate = time1,
+                lastdate = time1,
                 numofinstances = 1,
                 callstack = callstack,
                 wifion = jsonData['wifion'],
@@ -343,7 +346,7 @@ def save_exception(firstData, data_body, origin_time):
             appmemfree = jsonData['appmemfree'],
             appmemtotal = jsonData['appmemtotal'],
             country = jsonData['country'],
-            datetime = get_translated_time1(origin_time),
+            datetime = time1,
             locale = jsonData['locale'],
             mobileon = jsonData['mobileon'],
             gpson = jsonData['gpson'],
@@ -370,6 +373,7 @@ def save_exception(firstData, data_body, origin_time):
         #step 4-0 해당 인스턴스 아이디로 콘솔로그 저장
         logging.info("step 4 - 0 : save console log")
         if firstData.has_key("log"):
+            '''
             log_path = os.path.join(PROJECT_DIR,os.path.join(get_config('log_pool_path'), '%s.txt' % str(instanceElement.idinstance)))
             instanceElement.log_path = log_path
             session.add(instanceElement)
@@ -377,6 +381,10 @@ def save_exception(firstData, data_body, origin_time):
             f = file(log_path,'w')
             f.write(firstData['log'].encode('utf-8'))
             f.close()
+          '''
+            log = firstData['log'].encode('utf-8');
+            save_log(session,instanceElement.idinstance,log,time1);
+
 
         #step5: 이벤트패스 생성
         print "save event path"
@@ -389,6 +397,8 @@ def save_exception(firstData, data_body, origin_time):
 def save_native_exception(firstData, data_body, origin_time):
         logging.info("receive_native")
         jsonData = client_data_validate(data_body)
+        #time1은 15분단위로 자른 시간을 의미
+        time1=get_translated_time1(origin_time);
         #step1: apikey를 이용하여 project찾기
         logging.info("step 1: find project using apikey")
         #apikey가 validate한지 확인하기.
@@ -415,8 +425,8 @@ def save_native_exception(firstData, data_body, origin_time):
             autodetermine = autodetermine,
             rank = int(jsonData['rank']), # Undesided = -1, unhandled = 0, critical = 1, major = 2, minor = 3, native = 4
             status = 0, # 0 = new, 1 = open, 2 = ignore, 3 = renew
-            createdate = get_translated_time1(origin_time),
-            lastdate = get_translated_time1(origin_time),
+            createdate = time1,
+            lastdate = time1,
             callstack = '',#jsonData['callstack'],
             wifion = jsonData['wifion'],
             gpson = jsonData['gpson'],
@@ -449,7 +459,7 @@ def save_native_exception(firstData, data_body, origin_time):
             appmemfree = jsonData['appmemfree'],
             appmemtotal = jsonData['appmemtotal'],
             country = jsonData['country'],
-            datetime = get_translated_time1(origin_time),
+            datetime = time1,
             locale = jsonData['locale'],
             mobileon = jsonData['mobileon'],
             gpson = jsonData['gpson'],
@@ -497,6 +507,7 @@ def save_native_exception(firstData, data_body, origin_time):
         #step6 : 로그 정보 저장
         logging.info("step 6 : save log")
         if firstData.has_key("log"):
+            '''
             log_path = os.path.join(PROJECT_DIR,os.path.join(get_config('log_pool_path'), '%s.txt' % str(instanceElement.idinstance)))
             instanceElement.log_path = log_path
             session.add(instanceElement)
@@ -506,6 +517,10 @@ def save_native_exception(firstData, data_body, origin_time):
             f = file(log_path,'w')
             f.write(firstData['log'].encode('utf-8'))
             f.close()
+
+            '''
+            log = firstData['log'].encode('utf-8');
+            save_log(session,instanceElement.idinstance,log,time1);
 
         #step 7 :native dump data 저장 및 breakpad사용 데이터 분석
         #step 7 -1 : native dump 데이터 저장
@@ -675,6 +690,8 @@ def save_native_exception(firstData, data_body, origin_time):
             session.flush()
         logging.info("complete receive_native");
         print "complete receive_native"
+
+
 
 def finalize():
     mjpype.shutdownJVM()

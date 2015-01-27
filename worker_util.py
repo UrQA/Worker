@@ -224,6 +224,16 @@ def proguard_retrace_callstack(retrace_class, content, map_path, map_filename) :
     os.remove(temp_path_and_name)
     return result
 
+def save_log(session, idinstance, log, savetime):
+     instancelog=Instancelog(
+                idinstance = idinstance,
+                log = log,
+                savetime= savetime
+            )
+     session.add(instancelog);
+     session.flush();
+
+
 def client_data_validate(jsonData):
     oriData = jsonData.copy();
     errorFlag = 0
