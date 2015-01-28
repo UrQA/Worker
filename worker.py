@@ -373,15 +373,6 @@ def save_exception(firstData, data_body, origin_time):
         #step 4-0 해당 인스턴스 아이디로 콘솔로그 저장
         logging.info("step 4 - 0 : save console log")
         if firstData.has_key("log"):
-            '''
-            log_path = os.path.join(PROJECT_DIR,os.path.join(get_config('log_pool_path'), '%s.txt' % str(instanceElement.idinstance)))
-            instanceElement.log_path = log_path
-            session.add(instanceElement)
-            session.flush()
-            f = file(log_path,'w')
-            f.write(firstData['log'].encode('utf-8'))
-            f.close()
-          '''
             log = firstData['log'].encode('utf-8');
             save_log(session,instanceElement.idinstance,log,time1);
 
@@ -507,18 +498,6 @@ def save_native_exception(firstData, data_body, origin_time):
         #step6 : 로그 정보 저장
         logging.info("step 6 : save log")
         if firstData.has_key("log"):
-            '''
-            log_path = os.path.join(PROJECT_DIR,os.path.join(get_config('log_pool_path'), '%s.txt' % str(instanceElement.idinstance)))
-            instanceElement.log_path = log_path
-            session.add(instanceElement)
-            session.flush()
-            print log_path
-            print "log ------>" + firstData['log'].encode('utf-8');
-            f = file(log_path,'w')
-            f.write(firstData['log'].encode('utf-8'))
-            f.close()
-
-            '''
             log = firstData['log'].encode('utf-8');
             save_log(session,instanceElement.idinstance,log,time1);
 

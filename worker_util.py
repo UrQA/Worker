@@ -5,7 +5,7 @@ import os
 import ConfigParser
 import sys
 import uuid
-from worker_model import Eventpaths
+from worker_model import Eventpaths, Instancelog
 import time
 
 __author__ = 'dookim'
