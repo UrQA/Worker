@@ -5,7 +5,7 @@ import os
 import ConfigParser
 import sys
 import uuid
-from worker_model import Eventpaths
+from worker_model import Eventpaths, Instancelog
 import time
 
 __author__ = 'dookim'
@@ -361,6 +361,7 @@ class RANK:
     Minor    = 4
     rankcolor = ['gray','purple','red','blue','green']
     rankcolorbit = ["#de6363", "#9d61dd", "#dca763", "#5a9ccc", "#72c380" ]
+
 
 
 

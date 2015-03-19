@@ -60,15 +60,18 @@ if not os.path.exists(pid_path) :
 #step 1 : get current screen name
 m_argv = sys.argv
 filename = None
+len_argv = len(m_argv);
+DBG = False
 
-if len(m_argv) == 1:
+if len_argv == 1:
     filename = 'root'
-
 else :
-    filename=m_argv[1]
+    if len_argv >= 2:
+        filename=m_argv[1]
+    elif len_argv >= 3:
+	    DBG = m_argv[2] == 'debug_on';
 
 filename = filename + ".pid"
-
 pid_file_path = pid_path + filename
 
 #if file is already existed, remove this file
@@ -98,6 +101,16 @@ print "end of jvm"
 ##########################################init jvm###################################################
 
 print " [*] Waiting for messages. To exit press CTRL+C"
+
+def save_worker_log_with_type(log ,type):
+    if DBG :
+        if type is "E":
+            logging.error(log)
+        elif type is "I":
+            logging.info(log)
+
+def save_worker_log(log):
+    save_worker_log_with_type(log,"I");
 
 def callback(ch, method, properties,body):
 
@@ -184,7 +197,7 @@ def save_connection(data_body,origin_time):
 
 
 def save_exception(firstData, data_body, origin_time):
-        logging.info("save exception")
+        save_worker_log("save exception")
 
         #step 1 : data가 유효한지 확인하기.
         jsonData=client_data_validate(data_body)
@@ -193,7 +206,7 @@ def save_exception(firstData, data_body, origin_time):
         time1= get_translated_time1(origin_time);
 
         #step1: apikey를 이용하여 project찾기
-        logging.info("step 1 : find project using apikey")
+        save_worker_log("step 1 : find project using apikey")
         try:
             apikey = jsonData['apikey']
             projectElement =  session.query(Projects).filter_by(apikey = apikey).first()
@@ -207,7 +220,7 @@ def save_exception(firstData, data_body, origin_time):
             return
 
         #step2: errorname, errorclassname, linenum을 json에서 가져오기
-        logging.info("step 2 : parse data from json")
+        save_worker_log("step 2 : parse data from json")
         try:
             errorname = jsonData['errorname'].encode('utf-8')
             errorclassname = jsonData['errorclassname'].encode('utf-8')
@@ -221,17 +234,18 @@ def save_exception(firstData, data_body, origin_time):
 
         except Exception as e:
             print "cannot parsing data from jsonData"
-            logging.error(str(e))
+            save_worker_log(str(e))
             return
 
-        logging.info(firstData)
+
+        save_worker_log(firstData)
 
         map_path = os.path.join(PROJECT_DIR,get_config('proguard_map_path'))
         map_path = os.path.join(map_path,projectElement.apikey)
         map_path = os.path.join(map_path,appversion)
 
         #progurd가 적용된지 확인하는 부분!!!
-        logging.info("step 2 - 0 : check this project is adapted using proguard")
+        save_worker_log("step 2 - 0 : check this project is adapted using proguard")
         try:
             mapElement=session.query(Proguardmap).filter_by(pid = int(projectElement.pid), appversion = appversion).first()
             if mapElement == None:
@@ -246,7 +260,7 @@ def save_exception(firstData, data_body, origin_time):
 
 
         try:
-            logging.info("step 2-1-1 save error")
+            save_worker_log("step 2-1-1 save error")
             errorElement = session.query(Errors).filter_by(pid = int(projectElement.pid), errorclassname=str(errorclassname), errorname = str(errorname), linenum = str(linenum)).first()
             if errorElement == None:
                 print "errorElement is None"
@@ -261,32 +275,32 @@ def save_exception(firstData, data_body, origin_time):
             errorElement.totalmemusage += int(jsonData['appmemtotal'])
             session.add(errorElement)
             session.flush()
-            logging.info("step 2-1-2 update appstatistics")
+            save_worker_log("step 2-1-2 update appstatistics")
             iderror = errorElement.iderror
             query = '''UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = "{appversion}" and pid = {pid};'''.format(iderror=iderror, appversion=appversion, pid = pid);
             session.execute(query)
 
-            logging.info("step 2-1-2 update osstatistics")
+            save_worker_log("step 2-1-2 update osstatistics")
             query = '''UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = "{osversion}" and pid = {pid};'''.format(iderror=iderror, osversion=osversion, pid = pid);
             session.execute(query)
 
-            logging.info("step 2-1-2 update devicestatistics")
+            save_worker_log("step 2-1-2 update devicestatistics")
             query = '''UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = "{devicename}";'''.format(iderror=iderror, devicename=devicename);
             session.execute(query)
 
-            logging.info("step 2-1-2 update countrystatistics")
+            save_worker_log("step 2-1-2 update countrystatistics")
             query = '''UPDATE countrystatistics SET count = count + 1 WHERE iderror = {iderror} and countryname = "{countryname}";'''.format(iderror=iderror, countryname=countryname);
             session.execute(query)
 
-            logging.info("step 2-1-2 update activitystatistics")
+            save_worker_log("step 2-1-2 update activitystatistics")
             query = '''UPDATE activitystatistics SET count = count + 1 WHERE iderror = {iderror} and activityname = "{activityname}";'''.format(iderror=iderror, activityname=activityname);
             session.execute(query)
-            logging.info("step 2-1 complete")
+
+            save_worker_log("step 2-1 complete")
 
         except NoResultFound:
             autodetermine = 0
-
-            logging.info("step 2-2 save error and update statistics")
+            save_worker_log("step 2-2 save error and update statistics")
             errorElement = Errors(
                 pid = projectElement.pid,
                 errorname = errorname,
@@ -326,14 +340,15 @@ def save_exception(firstData, data_body, origin_time):
                 print e
 
         #step3: 테그 저장
-        logging.info("step 3 : save tag")
+        save_worker_log("step 3 : save tag")
+        print "save tag"
         if jsonData['tag']:
             tagstr = jsonData['tag']
             # 단순 create 연산으로 바꿀것.
             tagElement, created = get_or_create(session,Tags, iderror=errorElement.iderror,pid=projectElement.pid,tag=tagstr)
 
         #step4: 인스턴스 생성하기
-        logging.info("step 4 : create instance")
+        save_worker_log("step 4 : create instance")
         instanceElement = Instances(
             pid = pid,
             iderror = errorElement.iderror,
@@ -371,36 +386,27 @@ def save_exception(firstData, data_body, origin_time):
         session.flush()
 
         #step 4-0 해당 인스턴스 아이디로 콘솔로그 저장
-        logging.info("step 4 - 0 : save console log")
+        save_worker_log("step 4 - 0 : save console log")
         if firstData.has_key("log"):
-            '''
-            log_path = os.path.join(PROJECT_DIR,os.path.join(get_config('log_pool_path'), '%s.txt' % str(instanceElement.idinstance)))
-            instanceElement.log_path = log_path
-            session.add(instanceElement)
-            session.flush()
-            f = file(log_path,'w')
-            f.write(firstData['log'].encode('utf-8'))
-            f.close()
-          '''
             log = firstData['log'].encode('utf-8');
             save_log(session,instanceElement.idinstance,log,time1);
 
 
         #step5: 이벤트패스 생성
         print "save event path"
-        logging.info("step 5 : save event path")
+        save_worker_log("step 5 : save event path")
         event_path = jsonData['eventpaths']
         save_event_pathes(session, retrace_class,event_path,instanceElement,errorElement,mapElement,map_path)
 
-        logging.info("save exception is complete")
+        save_worker_log("save exception is complete")
 
 def save_native_exception(firstData, data_body, origin_time):
-        logging.info("receive_native")
+        save_worker_log("receive_native")
         jsonData = client_data_validate(data_body)
         #time1은 15분단위로 자른 시간을 의미
         time1=get_translated_time1(origin_time);
         #step1: apikey를 이용하여 project찾기
-        logging.info("step 1: find project using apikey")
+        save_worker_log("step 1: find project using apikey")
         #apikey가 validate한지 확인하기.
         try:
             apikey = jsonData['apikey']
@@ -414,7 +420,7 @@ def save_native_exception(firstData, data_body, origin_time):
 
         #step2: dummy errorElement생성
         #새로 들어온 에러라면 새로운 에러 생성
-        logging.info("step 2: if this error is new, make new error instance")
+        save_worker_log("step 2: if this error is new, make new error instance")
         autodetermine = 0
 
         errorElement = Errors(
@@ -440,13 +446,13 @@ def save_native_exception(firstData, data_body, origin_time):
         session.flush()
 
         #step3: 테그 저장
-        logging.info("step 3 : save tag")
+        save_worker_log("step 3 : save tag")
         tagstr = jsonData['tag']
         if tagstr:
             tagElement, created = get_or_create(session,Tags,id=errorElement.iderror, pid=projectElement.pid, tag=tagstr)
 
         #step4: 인스턴스
-        logging.info("step 4 : make instance")
+        save_worker_log("step 4 : make instance")
         instanceElement = Instances(
             pid = pid,
             iderror = errorElement.iderror,
@@ -482,7 +488,7 @@ def save_native_exception(firstData, data_body, origin_time):
         session.flush()
 
         #step5: 이벤트패스 생성
-        logging.info("step 5 : make event path")
+        save_worker_log("step 5 : make event path")
         appversion = jsonData['appversion']
 
         map_path = os.path.join(PROJECT_DIR,get_config('proguard_map_path'))
@@ -499,33 +505,21 @@ def save_native_exception(firstData, data_body, origin_time):
             print 'no proguard mapfile'
 
         #step5-0:이벤트 패스 실제로 만드는 부분
-        logging.info("step 5 : make event path using save_event_pathes")
+        save_worker_log("step 5 : make event path using save_event_pathes")
         print 'instanceElement.idinstance',instanceElement.idinstance
         eventpath = jsonData['eventpaths']
         save_event_pathes(session,retrace_class,eventpath,instanceElement,errorElement,mapElement,map_path)
 
         #step6 : 로그 정보 저장
-        logging.info("step 6 : save log")
+        save_worker_log("step 6 : save log")
         if firstData.has_key("log"):
-            '''
-            log_path = os.path.join(PROJECT_DIR,os.path.join(get_config('log_pool_path'), '%s.txt' % str(instanceElement.idinstance)))
-            instanceElement.log_path = log_path
-            session.add(instanceElement)
-            session.flush()
-            print log_path
-            print "log ------>" + firstData['log'].encode('utf-8');
-            f = file(log_path,'w')
-            f.write(firstData['log'].encode('utf-8'))
-            f.close()
-
-            '''
             log = firstData['log'].encode('utf-8');
             save_log(session,instanceElement.idinstance,log,time1);
 
         #step 7 :native dump data 저장 및 breakpad사용 데이터 분석
         #step 7 -1 : native dump 데이터 저장
         #what is dump?
-        logging.info("step 7 - 1 : save natvie dump data")
+        save_worker_log("step 7 - 1 : save natvie dump data")
         dump_path = os.path.join(PROJECT_DIR,os.path.join(get_config('dmp_pool_path'), '%s.dmp' % str(instanceElement.idinstance)))
         f = file(dump_path,'w')
         f.write(base64.b64decode(firstData['dump_data']))
@@ -539,18 +533,18 @@ def save_native_exception(firstData, data_body, origin_time):
 
         #step 7 -2 dmp 파일 분석
         #step4: dmp파일 분석(with nosym)
-        logging.info("step 7 - 2 : analyze dump file")
+        save_worker_log("step 7 - 2 : analyze dump file")
         print "before no sym"
         arg = [os.path.join(PROJECT_DIR,get_config('minidump_stackwalk_path')) , dump_path]
         fd_popen = subprocess.Popen(arg, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (stdout, stderr) = fd_popen.communicate()
         print "communiction result " + str(stdout) + " " +str(stderr)
         print "after no sym"
-        logging.info("result stdout : " + stdout)
-        logging.info("result stderr : " + stderr)
+        save_worker_log("result stdout : " + stdout)
+        save_worker_log("result stderr : " + stderr)
 
         #step 7-3 : so library 추출
-        logging.info("step 7 - 3 : extract so library")
+        save_worker_log("step 7 - 3 : extract so library")
         libs = []
         stderr_split = stderr.splitlines()
         for line in stderr_split:
@@ -563,7 +557,7 @@ def save_native_exception(firstData, data_body, origin_time):
             libs.append(lib)
 
         #step 7-4 : DB저장하기
-        logging.info("step 7 - 4: save dump file")
+        save_worker_log("step 7 - 4: save dump file")
         for lib in libs:
             sofileElement, created = get_or_create2(session,Sofiles,defaults={'uploaded':'X'}, pid=projectElement.pid, appversion=instanceElement.appversion, versionkey=lib[1], filename=lib[0]);
             #필요없는로직
@@ -573,7 +567,7 @@ def save_native_exception(firstData, data_body, origin_time):
                 print 'version key:', lib[1], lib[0], 'already exists'
 
         #step 7-5 : ErrorName, ErrorClassname, linenum 추출하기
-        logging.info("step 7 - 5: extract errorname, errorclassname, linenum")
+        save_worker_log("step 7 - 5: extract errorname, errorclassname, linenum")
         cs_flag = 0
         errorname = ''
         errorclassname = ''
@@ -602,7 +596,7 @@ def save_native_exception(firstData, data_body, origin_time):
                 cs_flag = 1
 
         #dmp파일 분석(with sym)
-        logging.info("step 7 - 6 : analyze dump file")
+        save_worker_log("step 7 - 6 : analyze dump file")
         sym_pool_path = os.path.join(PROJECT_DIR,os.path.join(get_config('sym_pool_path'),str(projectElement.apikey)))
         sym_pool_path = os.path.join(sym_pool_path, instanceElement.appversion)
         arg = [os.path.join(PROJECT_DIR,get_config('minidump_stackwalk_path')) , dump_path, sym_pool_path]
@@ -622,14 +616,14 @@ def save_native_exception(firstData, data_body, origin_time):
                 callstack += '\n'
                 callstack += line
                 cs_count = cs_count + 1
-        logging.info("step 8 : save error")
+        save_worker_log("step 8 : save error")
         try:
             #저에러랑 이에러랑 같은건데 실제로는 저걸로 검색이 안되서 내가 고민하는 거임
             #errorElement_exist = Errors.objects.get(pid=projectElement, errorname=errorname, errorclassname=errorclassname, linenum=linenum)
             errorElement_exist = session.query(Errors).filter_by(pid=projectElement.pid, errorname=errorname, errorclassname=errorclassname, linenum=linenum).first()
             if errorElement_exist == None:
                 raise NoResultFound
-            logging.info("step 8- 1 : when error already exist")
+            save_worker_log("step 8- 1 : when error already exist")
             errorElement_exist.lastdate = errorElement.lastdate
             errorElement_exist.numofinstances += 1
             errorElement_exist.wifion += errorElement.wifion
@@ -645,32 +639,34 @@ def save_native_exception(firstData, data_body, origin_time):
             session.add(instanceElement)
             session.flush()
             #change it to update query
-            logging.info("step 8-2 : update statistics")
-            logging.info("step 8-2-1 : update appstatistics")
+            save_worker_log("step 8-2 : update statistics")
+            save_worker_log("step 8-2-1 : update appstatistics")
             query = '''UPDATE appstatistics SET count = count + 1 WHERE iderror = {iderror} and appversion = "{appversion}" and pid = {pid};'''.format(iderror=iderror, appversion=appversion, pid = pid);
             session.execute(query)
-            logging.info("step 8-2-1 : update osstatistics")
+            save_worker_log("step 8-2-1 : update osstatistics")
             query = '''UPDATE osstatistics SET count = count + 1 WHERE iderror = {iderror} and osversion = "{osversion}" and pid = {pid};'''.format(iderror=iderror, osversion=instanceElement.osversion, pid = pid);
-            logging.info("executed query : " + query);
+            save_worker_log("executed query : " + query);
             session.execute(query)
-            logging.info("step 8-2-1 : update devicestatistics")
-            logging.info("hello")
+
+            save_worker_log("step 8-2-1 : update devicestatistics")
             query = '''UPDATE devicestatistics SET count = count + 1 WHERE iderror= {iderror} and devicename = "{devicename}";'''.format(iderror=iderror, devicename=instanceElement.device);
-            logging.info(query);
             session.execute(query)
-            logging.info("step 8-2-1 : update countrystatistics")
+
+            save_worker_log("step 8-2-1 : update countrystatistics")
             query = '''UPDATE countrystatistics SET count = count + 1 WHERE iderror = {iderror} and countryname = "{countryname}";'''.format(iderror=iderror, countryname=instanceElement.country);
             session.execute(query)
-            logging.info("step 8-2-1 : update activitystatistics")
+
+            save_worker_log("step 8-2-1 : update activitystatistics")
             query = '''UPDATE activitystatistics SET count = count + 1 WHERE iderror = {iderror} and activityname = "{activityname}";'''.format(iderror=iderror, activityname=instanceElement.lastactivity);
             session.execute(query)
+
             print "before deleting"
-            logging.info("step 8-3 : delete errorElement");
+            save_worker_log("step 8-3 : delete errorElement");
             session.delete(errorElement)
             session.flush()
             print 'native error %s:%s already exist' % (errorname, errorclassname)
         except NoResultFound:
-            logging.info("step 8- 1 : when error does not exist")
+            save_worker_log("step 8- 1 : when error does not exist")
             errorElement.errorname = errorname
             errorElement.errorclassname = errorclassname
             errorElement.callstack = callstack
@@ -688,7 +684,7 @@ def save_native_exception(firstData, data_body, origin_time):
             session.flush()
             session.add(Activitystatistics(iderror=errorElement.iderror,activityname=instanceElement.lastactivity,count=1))
             session.flush()
-        logging.info("complete receive_native");
+        save_worker_log("complete receive_native");
         print "complete receive_native"
 
 
@@ -705,10 +701,12 @@ if __name__ == '__main__':
             channel.start_consuming()
         except Exception as e:
             print e
-            logging.error(e)
+            save_worker_log(e)
             channel.stop_consuming()
     finally :
         finalize()
+
+
 
 
 
