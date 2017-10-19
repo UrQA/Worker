@@ -87,8 +87,8 @@ pid_file.close()
 
 ##########################################init redis###################################################
 redis_server = redis.Redis('localhost')
-#ex_stored_time = str(session.query(Appruncount2).order_by(desc(Appruncount2.idappruncount2)).first().datetime);
-ex_stored_time = "0";
+ex_stored_time = str(session.query(Appruncount2).order_by(desc(Appruncount2.idappruncount2)).first().datetime);
+
 print "end of redis init"
 ##########################################init redis###################################################
 
@@ -129,6 +129,7 @@ def callback(ch, method, properties,body):
         return
 
     if tag == 'connect':
+        #ex_stored_time = str(get_translated_time2(origin_time));
         save_connection(data_body,origin_time)
 
     elif tag == 'receive_exception':
@@ -390,7 +391,7 @@ def save_exception(firstData, data_body, origin_time):
         save_worker_log("step 4 - 0 : save console log")
         if firstData.has_key("log"):
             log = firstData['log'].encode('utf-8');
-            save_log(session,instanceElement.idinstance,log,time1);
+            #save_log(session,instanceElement.idinstance,log,time1);
 
 
         #step5: 이벤트패스 생성
