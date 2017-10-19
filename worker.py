@@ -87,7 +87,7 @@ pid_file.close()
 
 ##########################################init redis###################################################
 redis_server = redis.Redis('localhost')
-ex_stored_time = str(session.query(Appruncount2).order_by(desc(Appruncount2.idappruncount2)).first().datetime);
+#ex_stored_time = str(session.query(Appruncount2).order_by(desc(Appruncount2.idappruncount2)).first().datetime);
 print "end of redis init"
 ##########################################init redis###################################################
 
