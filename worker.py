@@ -178,8 +178,10 @@ def save_connection(data_body,origin_time):
                                 q_appversion = splited_data[2]
                                 q_appruncount=redis_server.get(key)
                                 redis_server.delete(key)
-                                if q_appruncount == None
-                                    q_appruncount = 1;
+
+                                if q_appruncount == None :
+                                    q_appruncount = 1
+                                
                                 bulk_insert_query = "INSERT INTO appruncount2(`pid`,`datetime`,`appversion`,`appruncount`) VALUES ('{}','{}','{}',{});".format(q_pid, q_datetime,q_appversion, q_appruncount);
                                 # Error 나서 쿼리 문 교체. pegasus
                                 #bulk_insert_query += " (NULL, {pid},'{datetime}','{appversion}',{appruncount}),".format(pid=q_pid,datetime=q_datetime,appversion=q_appversion,appruncount=q_appruncount)
