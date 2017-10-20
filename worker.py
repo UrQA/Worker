@@ -69,7 +69,7 @@ else :
     if len_argv >= 2:
         filename=m_argv[1]
     elif len_argv >= 3:
-	    DBG = m_argv[2] == 'debug_on';
+        DBG = m_argv[2] == 'debug_on';
 
 filename = filename + ".pid"
 pid_file_path = pid_path + filename
@@ -88,7 +88,6 @@ pid_file.close()
 ##########################################init redis###################################################
 redis_server = redis.Redis('localhost')
 ex_stored_time = str(session.query(Appruncount2).order_by(desc(Appruncount2.idappruncount2)).first().datetime);
-
 print "end of redis init"
 ##########################################init redis###################################################
 
@@ -129,7 +128,6 @@ def callback(ch, method, properties,body):
         return
 
     if tag == 'connect':
-        #ex_stored_time = str(get_translated_time2(origin_time));
         save_connection(data_body,origin_time)
 
     elif tag == 'receive_exception':
@@ -157,6 +155,7 @@ def save_connection(data_body,origin_time):
 
         cur_stored_time = str(get_translated_time2(origin_time));
         global ex_stored_time
+        global bulk_insert_query
         #print projectElement.name
         #step2: app version별 누적카운트 증가하기
         try:
@@ -166,7 +165,7 @@ def save_connection(data_body,origin_time):
                 if(redis_server.get("lock") == None):
                     try :
                         redis_server.set("lock",1);
-                        bulk_insert_query = "INSERT INTO appruncount2 VALUES"
+                        bulk_insert_query = ""
                         mKeys = redis_server.keys();
                         for key in mKeys:
                             if key == 'lock':
@@ -179,8 +178,13 @@ def save_connection(data_body,origin_time):
                                 q_appversion = splited_data[2]
                                 q_appruncount=redis_server.get(key)
                                 redis_server.delete(key)
-                                bulk_insert_query += " (NULL, {pid},'{datetime}','{appversion}',{appruncount}),".format(pid=q_pid,datetime=q_datetime,appversion=q_appversion,appruncount=q_appruncount)
-                        #bulk_insert_query=bulk_insert_query[0:len(bulk_insert_query)-1] + ";"
+                                if q_appruncount == None
+                                    q_appruncount = 1;
+                                bulk_insert_query = "INSERT INTO appruncount2(`pid`,`datetime`,`appversion`,`appruncount`) VALUES ('{}','{}','{}',{});".format(q_pid, q_datetime,q_appversion, q_appruncount);
+                                # Error 나서 쿼리 문 교체. pegasus
+                                #bulk_insert_query += " (NULL, {pid},'{datetime}','{appversion}',{appruncount}),".format(pid=q_pid,datetime=q_datetime,appversion=q_appversion,appruncount=q_appruncount)
+
+                                bulk_insert_query=bulk_insert_query[0:len(bulk_insert_query)-1] + ";"
                                 print bulk_insert_query
                                 session.execute(bulk_insert_query)
                     finally:
@@ -391,7 +395,7 @@ def save_exception(firstData, data_body, origin_time):
         save_worker_log("step 4 - 0 : save console log")
         if firstData.has_key("log"):
             log = firstData['log'].encode('utf-8');
-            #save_log(session,instanceElement.idinstance,log,time1);
+            save_log(session,instanceElement.idinstance,log,time1);
 
 
         #step5: 이벤트패스 생성
