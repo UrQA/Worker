@@ -87,7 +87,7 @@ pid_file.close()
 
 ##########################################init redis###################################################
 redis_server = redis.Redis('localhost')
-ex_stored_time = str(session.query(Appruncount2).order_by(desc(Appruncount2.idappruncount2)).first().datetime);
+#ex_stored_time = str(session.query(Appruncount2).order_by(desc(Appruncount2.idappruncount2)).first().datetime);
 print "end of redis init"
 ##########################################init redis###################################################
 
@@ -154,7 +154,10 @@ def save_connection(data_body,origin_time):
             return
 
         cur_stored_time = str(get_translated_time2(origin_time));
+
         global ex_stored_time
+        ex_stored_time = str(get_translated_time2(origin_time));
+
         global bulk_insert_query
         #print projectElement.name
         #step2: app version별 누적카운트 증가하기
@@ -181,7 +184,7 @@ def save_connection(data_body,origin_time):
 
                                 if q_appruncount == None :
                                     q_appruncount = 1
-                                
+
                                 bulk_insert_query = "INSERT INTO appruncount2(`pid`,`datetime`,`appversion`,`appruncount`) VALUES ('{}','{}','{}',{});".format(q_pid, q_datetime,q_appversion, q_appruncount);
                                 # Error 나서 쿼리 문 교체. pegasus
                                 #bulk_insert_query += " (NULL, {pid},'{datetime}','{appversion}',{appruncount}),".format(pid=q_pid,datetime=q_datetime,appversion=q_appversion,appruncount=q_appruncount)
