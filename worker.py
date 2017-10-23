@@ -186,7 +186,7 @@ def save_connection(data_body,origin_time):
                                 # Error 나서 쿼리 문 교체. pegasus
                                 #bulk_insert_query += " (NULL, {pid},'{datetime}','{appversion}',{appruncount}),".format(pid=q_pid,datetime=q_datetime,appversion=q_appversion,appruncount=q_appruncount)
 
-                                bulk_insert_query=bulk_insert_query[0:len(bulk_insert_query)-1] + ";"
+                               # bulk_insert_query=bulk_insert_query[0:len(bulk_insert_query)-1] + ";"
                                 print bulk_insert_query
                                 session.execute(bulk_insert_query)
                     finally:
